@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading News Radar</title>
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+        header {
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1 {
+            font-size: 24px;
+            color: #58a6ff;
+            margin: 0;
+        }
+        .status {
+            font-size: 12px;
+            color: #8b949e;
+        }
+        #feed {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .item {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 16px;
+            transition: border-color 0.2s;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        .item:hover {
+            border-color: #58a6ff;
+            background-color: #1c2128;
+        }
+        .item-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #f0f6fc;
+        }
+        .item-meta {
+            font-size: 12px;
+            color: #8b949e;
+            display: flex;
+            justify-content: space-between;
+        }
+        .source {
+            color: #58a6ff;
+            font-weight: bold;
+        }
+        .loading {
+            text-align: center;
+            font-style: italic;
+            color: #8b949e;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Trading News Radar</h1>
+            <div class="status" id="status">Updating...</div>
+        </header>
+        <div id="feed">
+            <div class="loading">Scanning feeds...</div>
+        </div>
+    </div>
+
+    <script>
+        async function loadFeed() {
+            const feedContainer = document.getElementById('feed');
+            const statusEl = document.getElementById('status');
+            
+            try {
+                const response = await fetch('/api');
+                const text = await response.text();
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(text, "text/xml");
+                const items = xml.querySelectorAll("item");
+                
+                feedContainer.innerHTML = '';
+                
+                if (items.length === 0) {
+                    feedContainer.innerHTML = '<div class="loading">No headlines found.</div>';
+                    return;
+                }
+
+                items.forEach(item => {
+                    const title = item.querySelector("title").textContent;
+                    const link = item.querySelector("link").textContent;
+                    const pubDate = item.querySelector("pubDate").textContent;
+                    
+                    // Extract source from title if it exists in [Source] format
+                    const match = title.match(/^\[(.*?)\] (.*)$/);
+                    const source = match ? match[1] : 'News';
+                    const cleanTitle = match ? match[2] : title;
+
+                    const date = new Date(pubDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                    const element = document.createElement('a');
+                    element.className = 'item';
+                    element.href = link;
+                    element.target = '_blank';
+                    element.innerHTML = \`
+                        <div class="item-title">\${cleanTitle}</div>
+                        <div class="item-meta">
+                            <span class="source">\${source}</span>
+                            <span>\${date}</span>
+                        </div>
+                    \`;
+                    feedContainer.appendChild(element);
+                });
+
+                statusEl.textContent = 'Live';
+            } catch (e) {
+                console.error(e);
+                feedContainer.innerHTML = '<div class="loading" style="color: #f85149;">Failed to load feed. Try refreshing.</div>';
+                statusEl.textContent = 'Offline';
+            }
+        }
+
+        loadFeed();
+        setInterval(loadFeed, 60000); // Refresh every minute
+    </script>
+</body>
+</html>
