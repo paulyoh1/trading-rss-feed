@@ -3,147 +3,278 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trading News Radar</title>
+    <title>TRADING_TERMINAL_V1</title>
     <style>
+        :root {
+            --bg: #000000;
+            --surface: #0a0a0a;
+            --border: #222;
+            --text: #00ff41; /* Matrix/Terminal Green */
+            --text-dim: #008f11;
+            --accent: #ffeb3b; /* Warning Yellow */
+            --highlight: #fff;
+            --font-mono: 'Courier New', Courier, monospace;
+        }
         body {
-            background-color: #0d1117;
-            color: #c9d1d9;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-mono);
             margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        /* Ticker Bar */
+        .ticker-wrap {
+            width: 100%;
+            background: var(--surface);
+            border-bottom: 2px solid var(--border);
+            overflow: hidden;
+            white-space: nowrap;
+            padding: 8px 0;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .ticker {
+            display: inline-block;
+            animation: ticker 60s linear infinite;
+            padding-left: 100%;
+        }
+        @keyframes ticker {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-100%, 0); }
+        }
+        .ticker-item {
+            display: inline-block;
+            margin-right: 50px;
+        }
+        .ticker-source {
+            color: var(--accent);
+            margin-right: 8px;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 250px;
+            border-right: 1px solid var(--border);
+            background: var(--surface);
             padding: 20px;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
         }
-        .container {
-            width: 100%;
-            max-width: 800px;
+        .sidebar h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin: 0;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
         }
-        header {
-            border-bottom: 1px solid #30363d;
-            padding-bottom: 20px;
-            margin-bottom: 20px;
+        .source-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 12px;
+        }
+        .source-list li {
+            padding: 5px 0;
+            color: var(--text-dim);
+        }
+        .source-list li.active {
+            color: var(--text);
+            font-weight: bold;
+        }
+
+        .feed-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: var(--bg);
+        }
+        .feed-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: baseline;
+            margin-bottom: 20px;
         }
-        h1 {
-            font-size: 24px;
-            color: #58a6ff;
+        .feed-header h1 {
+            font-size: 20px;
             margin: 0;
+            text-transform: uppercase;
         }
-        .status {
+        .timestamp {
             font-size: 12px;
-            color: #8b949e;
+            color: var(--text-dim);
         }
+
+        /* News Items */
         #feed {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 2px;
         }
         .item {
-            background-color: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 6px;
-            padding: 16px;
-            transition: border-color 0.2s;
+            border: 1px solid var(--border);
+            padding: 12px;
             text-decoration: none;
-            color: inherit;
-            display: block;
+            color: var(--text);
+            display: grid;
+            grid-template-columns: 80px 1fr 100px;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.1s;
+            cursor: crosshair;
         }
         .item:hover {
-            border-color: #58a6ff;
-            background-color: #1c2128;
+            background: #111;
+            border-color: var(--text);
+        }
+        .item-time {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-align: right;
         }
         .item-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #f0f6fc;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        .item-meta {
-            font-size: 12px;
-            color: #8b949e;
-            display: flex;
-            justify-content: space-between;
-        }
-        .source {
-            color: #58a6ff;
+        .item-source {
+            font-size: 11px;
+            color: var(--accent);
+            text-transform: uppercase;
             font-weight: bold;
         }
-        .loading {
-            text-align: center;
-            font-style: italic;
-            color: #8b949e;
-            margin-top: 50px;
+
+        /* New Item Flash */
+        @keyframes flash {
+            0% { background-color: var(--text-dim); }
+            100% { background-color: transparent; }
         }
+        .new-item {
+            animation: flash 1s ease-out;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Trading News Radar</h1>
-            <div class="status" id="status">Updating...</div>
-        </header>
-        <div id="feed">
-            <div class="loading">Scanning feeds...</div>
+    <div class="ticker-wrap">
+        <div class="ticker" id="ticker">Loading market intelligence...</div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <h2>System Status</h2>
+            <div style="font-size: 12px; margin-bottom: 20px;">
+                CONNECTION: <span style="color: var(--text)">STABLE</span><br>
+                LATENCY: <span id="latency">--ms</span><br>
+                UPTIME: <span id="uptime">00:00:00</span>
+            </div>
+            <h2>Active Feeds</h2>
+            <ul class="source-list" id="sources">
+                <li class="active">All Sources</li>
+            </ul>
+        </div>
+
+        <div class="feed-area">
+            <div class="feed-header">
+                <h1>LIVE_NEWS_STREAM</h1>
+                <div class="timestamp" id="last-update">Last sync: --:--:--</div>
+            </div>
+            <div id="feed">
+                <div style="text-align: center; margin-top: 100px; color: var(--text-dim);">INITIALIZING DATA STREAM...</div>
+            </div>
         </div>
     </div>
 
     <script>
+        let lastItems = [];
+        let startTime = Date.now();
+
+        function updateUptime() {
+            const diff = Math.floor((Date.now() - startTime) / 1000);
+            const h = Math.floor(diff / 3600).toString().padStart(2, '0');
+            const m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
+            const s = (diff % 60).toString().padStart(2, '0');
+            document.getElementById('uptime').textContent = \`\${h}:\${m}:\${s}\`;
+        }
+        setInterval(updateUptime, 1000);
+
         async function loadFeed() {
+            const startFetch = Date.now();
             const feedContainer = document.getElementById('feed');
-            const statusEl = document.getElementById('status');
+            const tickerContainer = document.getElementById('ticker');
+            const lastUpdateEl = document.getElementById('last-update');
+            const latencyEl = document.getElementById('latency');
             
             try {
                 const response = await fetch('/api');
                 const text = await response.text();
                 const parser = new DOMParser();
                 const xml = parser.parseFromString(text, "text/xml");
-                const items = xml.querySelectorAll("item");
+                const items = Array.from(xml.querySelectorAll("item"));
+                
+                // Latency
+                latencyEl.textContent = \`\${Date.now() - startFetch}ms\`;
+                lastUpdateEl.textContent = \`Last sync: \${new Date().toLocaleTimeString()}\`;
+
+                if (items.length === 0) return;
+
+                // Update Ticker
+                const tickerHtml = items.slice(0, 10).map(item => {
+                    const title = item.querySelector("title").textContent;
+                    const match = title.match(/^\[(.*?)\] (.*)$/);
+                    return \`<span class="ticker-item"><span class="ticker-source">\${match ? match[1] : 'NEWS'}</span> \${match ? match[2] : title}</span>\`;
+                }).join('');
+                tickerContainer.innerHTML = tickerHtml + tickerHtml; // Double for seamless loop
+
+                // Update Feed
+                const currentIds = items.map(i => i.querySelector("link").textContent);
+                const newItems = currentIds.filter(id => !lastItems.includes(id));
                 
                 feedContainer.innerHTML = '';
-                
-                if (items.length === 0) {
-                    feedContainer.innerHTML = '<div class="loading">No headlines found.</div>';
-                    return;
-                }
-
-                items.forEach(item => {
+                items.forEach((item, index) => {
                     const title = item.querySelector("title").textContent;
                     const link = item.querySelector("link").textContent;
                     const pubDate = item.querySelector("pubDate").textContent;
                     
-                    // Extract source from title if it exists in [Source] format
                     const match = title.match(/^\[(.*?)\] (.*)$/);
                     const source = match ? match[1] : 'News';
                     const cleanTitle = match ? match[2] : title;
-
-                    const date = new Date(pubDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const date = new Date(pubDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
                     const element = document.createElement('a');
-                    element.className = 'item';
+                    element.className = 'item' + (newItems.includes(link) ? ' new-item' : '');
                     element.href = link;
                     element.target = '_blank';
                     element.innerHTML = \`
+                        <div class="item-time">\${date}</div>
                         <div class="item-title">\${cleanTitle}</div>
-                        <div class="item-meta">
-                            <span class="source">\${source}</span>
-                            <span>\${date}</span>
-                        </div>
+                        <div class="item-source">\${source}</div>
                     \`;
                     feedContainer.appendChild(element);
                 });
 
-                statusEl.textContent = 'Live';
+                lastItems = currentIds;
             } catch (e) {
                 console.error(e);
-                feedContainer.innerHTML = '<div class="loading" style="color: #f85149;">Failed to load feed. Try refreshing.</div>';
-                statusEl.textContent = 'Offline';
             }
         }
 
         loadFeed();
-        setInterval(loadFeed, 60000); // Refresh every minute
+        setInterval(loadFeed, 15000); // 15s Polling for "Terminal" feel
     </script>
 </body>
 </html>
