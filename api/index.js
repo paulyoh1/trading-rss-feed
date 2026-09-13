@@ -1,11 +1,13 @@
 const RSSParser = require('rss-parser');
 const parser = new RSSParser();
 
-const FEEDS = [
-    'https://finance.yahoo.com/rss/headlines',
-    'https://www.cnbc.com/id/100003114/device/rss/rss.html',
-    'https://feeds.a.cnn.com/cnn/cnnbusiness',
-];
+const FEEDS = process.env.FEEDS 
+    ? process.env.FEEDS.split(',') 
+    : [
+        'https://finance.yahoo.com/rss/headlines',
+        'https://www.cnbc.com/id/100003114/device/rss/rss.html',
+        'https://feeds.a.cnn.com/cnn/cnnbusiness',
+    ];
 
 async function generateRSS() {
     let allItems = [];
